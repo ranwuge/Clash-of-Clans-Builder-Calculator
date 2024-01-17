@@ -1,5 +1,6 @@
 ﻿using OfficeOpenXml;
 using System.Collections;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using System.Xml.Serialization;
@@ -25,7 +26,8 @@ internal class Program
         Console.WriteLine($"length of the pool:{tcp.time_chunk_pool.Count}");
         */
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        string adress = @"D:\COC-Calculator\BuilderCalculator\defense_data.xlsx";
+        string adress = @"C:\Users\ranwu\source\repos\Clash-of-Clans-Builder-Calculator\defense_data.xlsm";
+        Console.WriteLine(adress);
         ExcelPackage basic_excel = new ExcelPackage(adress);
         ExcelWorksheet defense_data = basic_excel.Workbook.Worksheets[1];
         ExcelWorksheet input_data = basic_excel.Workbook.Worksheets[0];
@@ -71,86 +73,7 @@ class Time_Chunk :IDisposable
         throw new NotImplementedException();
     }
 }
-/*
-class Time_Chunk_Pool
-{
-    public ArrayList time_chunk_pool = new();
-    public int TH_num = 12;
-    public void Add_Chunk_to_pool(Time_Chunk time_chunk)
-    {
-        time_chunk_pool.Add(time_chunk);
-    }
-    public void From_input_to_chunk(ExcelWorksheet input_data, ExcelWorksheet basic_data)
-    {
-        Time_Chunk added_chunk = new Time_Chunk();
-        var input_row_Num = input_data.Dimension.Rows;
-        var basic_row_Num = basic_data.Dimension.Rows;
-        int max_level = 0;
-        int building_id = 1;
 
-        foreach (var cell in input_data.Cells[$"A2:A{input_row_Num}"]) 
-        {
-            //用户输入的建筑数据：
-            string building_name = (string)cell.Value;
-            Double building_level_D = (Double)cell.Offset(0, 1).Value;
-            int building_level = (int)building_level_D ;
-
-            //根据时块池，确定该建筑的id           
-            if (cell.Start.Row == 3) { building_id = 1; }
-            else
-            {
-                string a = cell.Offset(-1, 0).GetValue<string>();
-                if (cell.Offset(-1, 0).GetValue<string>() != building_name) { building_id = 1; } 
-                else { building_id++; }
-            }
-            //根据大本营等级确定该建筑可以升到的最大等级
-            foreach (var b_cell in basic_data.Cells[$"A2:A{basic_row_Num}"])
-            {
-                string b_cell_name = (string)b_cell.Value;
-                Double b_cell_levelD = (Double)b_cell.Offset(0, 1).Value;
-                Double b_cell_THD = (Double)b_cell.Offset(0, 3).Value;
-                Double? b_cell_THD_next = 100;
-                if (b_cell.Start.Row != basic_row_Num) { b_cell_THD_next = (Double)b_cell.Offset(1, 3).Value; }
-                else { b_cell_THD_next = (Double)b_cell.Offset(0, 3).Value; }
-                int b_cell_level = (int)b_cell_levelD;
-                int b_cell_TH = (int)b_cell_THD;
-                int b_cell_TH_next = (int)b_cell_THD_next;
-
-                if (building_name == b_cell_name && TH_num == b_cell_TH && building_level != b_cell_TH_next)
-                {
-                    max_level = b_cell_level;
-                    break;
-                }
-            }
-
-            //根据可以升级的等级添加时块
-            for (int i = building_level + 1; i <= max_level; i++) 
-            {
-                added_chunk.chunk_level = i;
-                //查找该等级下的消耗时间
-                foreach (var b_cell in basic_data.Cells[$"A2:A{basic_row_Num}"])
-                {
-                    string b_cell_name = (string)b_cell.Value;
-                    Double b_cell_level = (Double)b_cell.Offset(0, 1).Value;
-                    Double b_cell_cost_time = (Double)b_cell.Offset(0, 2).Value;
-                    if (building_name == b_cell_name && i == b_cell_level)
-                    {
-                        added_chunk.chunk_time_length = (decimal)b_cell_cost_time;
-                        added_chunk.chunk_id = building_id;
-                        added_chunk.chunk_name = building_name;
-                        break;
-                    }   
-                }
-                Time_Chunk ck = new Time_Chunk(added_chunk.chunk_time_length, added_chunk.chunk_name,
-                                                added_chunk.chunk_level,added_chunk.chunk_id);
-                Add_Chunk_to_pool(ck);
-                Console.WriteLine($"name:{added_chunk.chunk_name},id:{added_chunk.chunk_id}," +
-                                  $"cost_time:{added_chunk.chunk_time_length},level:{added_chunk.chunk_level}");
-            }
-        }
-    }
-}
-*/
 public class Building_Unit 
 {
     public int bu_level;
@@ -205,6 +128,7 @@ static class Generator
         {
             bu_name = cell.GetCellValue<string>();  //建筑的名字
             bu_level = cell.Offset(0, 1).GetCellValue<int>();   //建筑的当前等级
+            if (bu_level == -1) { continue; }
             //建筑的id（与上一个建筑比较找出id）
             if (cell.Start.Row == 3)    
             { 
@@ -225,7 +149,7 @@ static class Generator
                 int b_cell_TH_next = 100;
                 if (b_cell.Start.Row != basic_row_Num) { b_cell_TH_next = b_cell.Offset(1, 3).GetCellValue<int>(); }
                 else { b_cell_TH_next = b_cell.Offset(0, 3).GetCellValue<int>(); }
-                if (bu_name == b_cell_name && TH_level == b_cell_TH && TH_level != b_cell_TH_next)
+                if (bu_name == b_cell_name &&  TH_level <= b_cell_TH_next)
                 {
                     bu_max_level = b_cell_level;
                     break;
@@ -237,9 +161,13 @@ static class Generator
             added_bu.bu_name = bu_name;
             added_bu.bu_level = bu_level;
             added_bu.bu_max_level = bu_max_level;
-            bup.Add_bu(added_bu);
-            Console.WriteLine($"ADDing Bu: name:{added_bu.bu_name},id:{added_bu.bu_id}," +
-                                    $"current_level:{added_bu.bu_level},max_level:{added_bu.bu_max_level}");           
+            if (bu_level != bu_max_level)
+            {
+                bup.Add_bu(added_bu);
+                Console.WriteLine($"ADDing Bu: name:{added_bu.bu_name},id:{added_bu.bu_id}," +
+                                       $"current_level:{added_bu.bu_level},max_level:{added_bu.bu_max_level}");
+            }
+            else { Console.WriteLine($"ADDing nothing."); }      
         }
             return bup;
     }
@@ -256,28 +184,31 @@ static class Generator
 
 
         //查找所有时块
-        for (int i = bu_level + 1; i <= max_level; i++)
+        if (bu_level < max_level)
         {
-            Time_Chunk tc = new Time_Chunk();   //构建要用的时块
-            tc.chunk_name = bu_name;    //该时块的名字
-            tc.chunk_level = i;    //该时块的名字
-            //查找所有时块的消耗时间
-            foreach (var cell in basic_data.Cells[$"A2:A{basic_row_Num}"])
+            for (int i = bu_level + 1; i <= max_level; i++)
             {
-                string b_cell_name = (string)cell.Value;
-                Double b_cell_level = (Double)cell.Offset(0, 1).Value;
-                Double b_cell_cost_time = (Double)cell.Offset(0, 2).Value;
-                if (bu_name == b_cell_name && i == b_cell_level)
+                Time_Chunk tc = new Time_Chunk();   //构建要用的时块
+                tc.chunk_name = bu_name;    //该时块的名字
+                tc.chunk_level = i;    //该时块的等级
+                                       //查找所有时块的消耗时间
+                foreach (var cell in basic_data.Cells[$"A2:A{basic_row_Num}"])
                 {
-                    tc.chunk_time_length = (decimal)b_cell_cost_time;
-                    tc.chunk_time_length = Math.Round(tc.chunk_time_length,2);
-                    tc.chunk_id = bu_id;
-                    break;
+                    string b_cell_name = (string)cell.Value;
+                    Double b_cell_level = (Double)cell.Offset(0, 1).Value;
+                    Double b_cell_cost_time = (Double)cell.Offset(0, 2).Value;
+                    if (bu_name == b_cell_name && i == b_cell_level)
+                    {
+                        tc.chunk_time_length = (decimal)b_cell_cost_time;
+                        tc.chunk_time_length = Math.Round(tc.chunk_time_length, 2);
+                        tc.chunk_id = bu_id;
+                        break;
+                    }
                 }
+                bu.tc_set.Add(tc);
+                Console.WriteLine($"ADDing tc: name:{tc.chunk_name},id:{tc.chunk_id}," +
+                          $"current_level:{tc.chunk_level},cost_time:{tc.chunk_time_length}+\n");
             }
-            bu.tc_set.Add(tc);
-            Console.WriteLine($"ADDing tc: name:{tc.chunk_name},id:{tc.chunk_id}," +
-                      $"current_level:{tc.chunk_level},cost_time:{tc.chunk_time_length}+\n");
         }
     }
 
