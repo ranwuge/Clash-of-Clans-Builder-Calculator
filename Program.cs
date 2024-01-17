@@ -9,24 +9,8 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        /*
-        Time_Chunk_Pool tcp = new Time_Chunk_Pool();
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        string adress = @"D:\COC-Calculator\BuilderCalculator\defense_data.xlsx";
-        ExcelPackage basic_excel = new ExcelPackage(adress);
-        ExcelWorksheet defense_data = basic_excel.Workbook.Worksheets[1];
-        ExcelWorksheet input_data = basic_excel.Workbook.Worksheets[0];
-        tcp.From_input_to_chunk(input_data, defense_data);  //从用户输入构建时块池
-        Console.WriteLine($"Start Programming...________________________________");
-        foreach (Time_Chunk chunk in tcp.time_chunk_pool) 
-        {
-            Console.WriteLine($"name:{chunk.chunk_name},id:{chunk.chunk_id}," +
-                                      $"cost_time:{chunk.chunk_time_length},level:{chunk.chunk_level}");  
-        }
-        Console.WriteLine($"length of the pool:{tcp.time_chunk_pool.Count}");
-        */
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        string adress = @"C:\Users\ranwu\source\repos\Clash-of-Clans-Builder-Calculator\defense_data.xlsm";
+        string adress = @"D:\COC-Calculator\BuilderCalculator\defense_data.xlsm";
         Console.WriteLine(adress);
         ExcelPackage basic_excel = new ExcelPackage(adress);
         ExcelWorksheet defense_data = basic_excel.Workbook.Worksheets[1];
@@ -147,12 +131,27 @@ static class Generator
                 int b_cell_level = b_cell.Offset(0, 1).GetCellValue<int>();
                 int b_cell_TH = b_cell.Offset(0, 3).GetCellValue<int>();
                 int b_cell_TH_next = 100;
-                if (b_cell.Start.Row != basic_row_Num) { b_cell_TH_next = b_cell.Offset(1, 3).GetCellValue<int>(); }
-                else { b_cell_TH_next = b_cell.Offset(0, 3).GetCellValue<int>(); }
-                if (bu_name == b_cell_name &&  TH_level <= b_cell_TH_next)
+                string? b_cell_name_next = "";
+                if (b_cell.Start.Row != basic_row_Num) 
                 {
-                    bu_max_level = b_cell_level;
-                    break;
+                    b_cell_TH_next = b_cell.Offset(1, 3).GetCellValue<int>();
+                    b_cell_name_next = b_cell.Offset(1, 0).GetCellValue<string>();
+
+                }
+                else 
+                { b_cell_name_next = "end"; }
+                if (bu_name == b_cell_name)
+                {
+                    if (bu_name == b_cell_name_next && TH_level < b_cell_TH_next)
+                    {
+                        bu_max_level = b_cell_level;
+                        break;
+                    }
+                    else if(bu_name != b_cell_name_next && TH_level >= b_cell_TH_next)
+                    {
+                        bu_max_level = b_cell_level; 
+                        break;
+                    }
                 }
             }
             //将建筑单元添加至建筑单元池中
